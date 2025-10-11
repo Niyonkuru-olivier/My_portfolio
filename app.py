@@ -1,17 +1,12 @@
 from flask import Flask, render_template, request, redirect, flash, url_for
-from flask_mail import Mail, Message
+import requests, os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = os.getenv("SECRET_KEY", "your_secret_key_here")
 
-# Flask-Mail configuration (use Gmail App Password)
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'oniyonkuru233@gmail.com'
-app.config['MAIL_PASSWORD'] = 'dqbw wyni rgts pzsg'  # Gmail App Password
-
-mail = Mail(app)
+# Use Resend Email API (works even on Render free tier)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "your_resend_api_key_here")
+RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", "oniyonkuru233@gmail.com")
 
 @app.route('/')
 def index():
@@ -24,23 +19,36 @@ def send_email():
         sender_email = request.form['email']
         message_content = request.form['message']
 
-        msg = Message(
-            subject=f"New Message from {name}",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=['oniyonkuru233@gmail.com']  # You receive the email
+        # Prepare email content
+        subject = f"New Message from {name}"
+        html_content = f"""
+        <p><strong>You have received a new message from your portfolio contact form:</strong></p>
+        <p><strong>Name:</strong> {name}<br>
+        <strong>Email:</strong> {sender_email}</p>
+        <p><strong>Message:</strong><br>{message_content}</p>
+        """
+
+        # Send via Resend API
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": f"{name} <onboarding@resend.dev>",
+                "to": [RECEIVER_EMAIL],
+                "subject": subject,
+                "html": html_content
+            }
         )
-        msg.body = f"""
-You have received a new message from your portfolio contact form:
 
-Name: {name}
-Email: {sender_email}
+        if response.status_code == 200:
+            flash('✅ Message sent successfully! Thank you for contacting me.', 'success')
+        else:
+            print(response.text)
+            flash('❌ Error sending message. Please try again later.', 'danger')
 
-Message:
-{message_content}
-"""
-
-        mail.send(msg)
-        flash('✅ Message sent successfully! Thank you for contacting me.', 'success')
         return redirect(url_for('index'))
 
     except Exception as e:
