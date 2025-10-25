@@ -8,6 +8,59 @@
     <link rel="stylesheet" href="/static/style.css">
     <script defer src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
     <script defer src="/static/app.js"></script>
+    
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+            const messageDisplay = document.getElementById('messageDisplay');
+            const messageContent = document.getElementById('messageContent');
+            
+            try {
+                const response = await fetch('/api/send_email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        message: message
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageContent.textContent = '✅ ' + result.message;
+                    messageContent.style.backgroundColor = 'green';
+                    document.getElementById('contactForm').reset();
+                } else {
+                    messageContent.textContent = '❌ ' + result.message;
+                    messageContent.style.backgroundColor = 'red';
+                }
+                
+                messageDisplay.style.display = 'block';
+                
+                // Hide message after 5 seconds
+                setTimeout(() => {
+                    messageDisplay.style.display = 'none';
+                }, 5000);
+                
+            } catch (error) {
+                messageContent.textContent = '❌ Error sending message. Please try again later.';
+                messageContent.style.backgroundColor = 'red';
+                messageDisplay.style.display = 'block';
+                
+                setTimeout(() => {
+                    messageDisplay.style.display = 'none';
+                }, 5000);
+            }
+        });
+    </script>
 
     <title>Olivier Niyonkuru Portfolio</title>
     <link rel="shortcut icon" href="/static/img/konde.jpg">
@@ -212,27 +265,18 @@
                 </div>
             </div>
 
-            <!-- ✅ Contact Form that actually sends email -->
-            <form id="contactForm" action="{{ url_for('send_email') }}" method="POST">
-                <input type="text" name="name" placeholder="Your Name" required>
-                <input type="email" name="email" placeholder="Your Email" required>
-                <textarea name="message" placeholder="Your Message" required></textarea>
+            <!-- ✅ Contact Form that sends email via API -->
+            <form id="contactForm">
+                <input type="text" id="name" name="name" placeholder="Your Name" required>
+                <input type="email" id="email" name="email" placeholder="Your Email" required>
+                <textarea id="message" name="message" placeholder="Your Message" required></textarea>
                 <button type="submit" class="cta">Send Message</button>
             </form>
 
-            <!-- ✅ Flash Message Display -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                <div style="margin-top: 20px;">
-                  {% for category, message in messages %}
-                    <div style="padding: 10px; border-radius: 8px; color: white;
-                                background-color: {{ 'green' if category == 'success' else 'red' }};">
-                      {{ message }}
-                    </div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            {% endwith %}
+            <!-- ✅ Message Display -->
+            <div id="messageDisplay" style="margin-top: 20px; display: none;">
+                <div id="messageContent" style="padding: 10px; border-radius: 8px; color: white;"></div>
+            </div>
 
         </div>
     </section>
